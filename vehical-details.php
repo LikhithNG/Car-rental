@@ -2,18 +2,51 @@
 session_start();
 include('includes/config.php');
 error_reporting(0);
+const BOOKING_DATE_FORMAT = 'd/m/Y';
+
+// Parses a dd/mm/yyyy string strictly; returns DateTime or null.
+function parseBookingDate($value)
+{
+    if (!is_string($value)) {
+        return null;
+    }
+    $date = DateTime::createFromFormat('!' . BOOKING_DATE_FORMAT, trim($value));
+    $errors = DateTime::getLastErrors();
+    if ($date === false || ($errors !== false && ($errors['warning_count'] > 0 || $errors['error_count'] > 0))) {
+        return null;
+    }
+    return $date;
+}
+
 if(isset($_POST['submit']))
 {
-$fromdate=$_POST['fromdate'];
-$todate=$_POST['todate']; 
-$message=$_POST['message'];
+if (empty($_SESSION['login'])) {
+    header('Location: index.php');
+    exit;
+}
+$fromdate=trim($_POST['fromdate'] ?? '');
+$todate=trim($_POST['todate'] ?? '');
+$message=$_POST['message'] ?? '';
 $useremail=$_SESSION['login'];
 $status=0;
-$vhid=$_GET['vhid'];
+$vhid=filter_var($_GET['vhid'] ?? null, FILTER_VALIDATE_INT, array('options' => array('min_range' => 1)));
+$from=parseBookingDate($fromdate);
+$to=parseBookingDate($todate);
+if ($vhid === false || $vhid === null) {
+echo "<script>alert('Invalid vehicle.');</script>";
+}
+elseif ($from === null || $to === null) {
+echo "<script>alert('Please enter valid dates in dd/mm/yyyy format.');</script>";
+}
+elseif ($to < $from) {
+echo "<script>alert('To Date must be on or after From Date.');</script>";
+}
+else
+{
 $sql="INSERT INTO  tblbooking(userEmail,VehicleId,FromDate,ToDate,message,Status) VALUES(:useremail,:vhid,:fromdate,:todate,:message,:status)";
 $query = $dbh->prepare($sql);
 $query->bindParam(':useremail',$useremail,PDO::PARAM_STR);
-$query->bindParam(':vhid',$vhid,PDO::PARAM_STR);
+$query->bindParam(':vhid',$vhid,PDO::PARAM_INT);
 $query->bindParam(':fromdate',$fromdate,PDO::PARAM_STR);
 $query->bindParam(':todate',$todate,PDO::PARAM_STR);
 $query->bindParam(':message',$message,PDO::PARAM_STR);
@@ -27,6 +60,7 @@ echo "<script>alert('Booking successfull.');</script>";
 else 
 {
 echo "<script>alert('Something went wrong. Please try again');</script>";
+}
 }
 
 }
