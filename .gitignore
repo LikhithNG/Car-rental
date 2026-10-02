@@ -1,0 +1,8 @@
+# Database credentials
+includes/config.php
+
+# Uploaded vehicle images
+admin/img/vehicleimages/
+
+# OS
+.DS_Store
